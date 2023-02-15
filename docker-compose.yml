@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  db:
+    container_name: database
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: booksdb
+    ports:
+      - 5432:5432
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  app:
+    container_name: booksapp
+    image: weronikatlalka/infrastruktura-systemowa:1.0
+    ports:
+      - 5001:5000
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: development
+    restart: always
+    depends_on:
+      - db
+
+volumes:
+  db-data:

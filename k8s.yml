@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: booksapp-configmap
+data:
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password
+  POSTGRES_DB: booksdb
+  FLASK_APP: app.py
+  FLASK_ENV: development
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booksapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booksapp
+  template:
+    metadata:
+      labels:
+        app: booksapp
+    spec:
+      containers:
+        - name: booksapp
+          image: weronikatlalka/infrastruktura-systemowa:1.0
+          ports:
+            - containerPort: 5001
+          envFrom:
+            - configMapRef:
+                name: booksapp-configmap
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+        - name: database
+          image: postgres
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: booksapp-configmap
+      volumes:
+        - name: postgres-persistent-storage
+          persistentVolumeClaim:
+            claimName: db-data-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booksapp
+spec:
+  selector:
+    app: booksapp
+  ports:
+    - name: http
+      port: 5001
+      targetPort: 5001
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  selector:
+    app: database
+  ports:
+    - name: tcp
+      port: 5432
+      targetPort: 5432
+  type: LoadBalancer
